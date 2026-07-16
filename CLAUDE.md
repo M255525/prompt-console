@@ -23,10 +23,6 @@
   - `buildAiPrompt(idea)` 把使用者一句話需求連同 CRISPE 六維度說明組成提示詞，要求模型回傳固定鍵值的 JSON（`{capacity,role,insight,statement,personality,experiment}`），以 `extractJsonObject()` 寬鬆解析；產生前備份現有六欄位到 `localStorage`（key: `crispePromptBackup`），「還原 AI 產生前內容」可復原。
   - 與其他 generator 的差異：這裡是**從一句話生成全新內容**（不是優化既有敘述），所以 prompt 要求模型合理補全未提及的細節，而非用【】標示待補。
 
-## platform/ — CRISPE 卡牌遊戲的 Google Sites 嵌入版
-
-`platform/CRISPE卡牌配對-GoogleSites嵌入用.html` 不是本專案（提示詞控制台）的產物，而是**姊妹專案 `../crispe-game/` 的 Google Sites 嵌入變體**，應使用者要求放在這裡。它由 `crispe-game/index.html` 以腳本產生（產生指令與同步規則見 `../crispe-game/CLAUDE.md`），**不要在這裡直接編輯**——改遊戲請改 crispe-game 主檔再重新產生。一鍵複製嵌入碼的 bat 放在 `../crispe-game/一鍵複製-貼到GoogleSites.bat`（以相對路徑指回本資料夾的嵌入檔）。
-
 ## 隱私與警語
 
 無伺服器端、無任何資料上傳；所有輸入只存在使用者瀏覽器的 localStorage。首頁與手冊皆明列使用警語：本工具僅產生提示詞架構、不對後續 AI 輸出負責、請勿輸入真實個資或機密資料、僅供教學與個人使用禁止商業化。修改功能時這些警語需一併檢視是否仍準確。
