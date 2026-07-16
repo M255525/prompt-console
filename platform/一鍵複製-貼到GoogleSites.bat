@@ -1,5 +1,5 @@
 @echo off
-chcp 65001 >/dev/null
+chcp 65001 >nul
 powershell -NoProfile -Command "Get-Content -Raw -Encoding UTF8 '%~dp0CRISPE卡牌配對-GoogleSites嵌入用.html' | Set-Clipboard"
 echo.
 echo 已複製到剪貼簿！
