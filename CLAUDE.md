@@ -23,6 +23,10 @@
   - `buildAiPrompt(idea)` 把使用者一句話需求連同 CRISPE 六維度說明組成提示詞，要求模型回傳固定鍵值的 JSON（`{capacity,role,insight,statement,personality,experiment}`），以 `extractJsonObject()` 寬鬆解析；產生前備份現有六欄位到 `localStorage`（key: `crispePromptBackup`），「還原 AI 產生前內容」可復原。
   - 與其他 generator 的差異：這裡是**從一句話生成全新內容**（不是優化既有敘述），所以 prompt 要求模型合理補全未提及的細節，而非用【】標示待補。
 
+## 頂部跑馬燈（2026-07-30 新增）
+
+`#marqueeBar` 固定在頁面最上方（`position:fixed`，z-index 高於 `.topbar` 的 sticky），內容跟 ai-video-studio 系列（主版／`AIvideo_studio` 教學版／`ppt-course-video`／`video-editor`）**共用同一個授權伺服器**（`https://script.google.com/macros/s/AKfycbwKX0.../exec`）與同一份跑馬燈 Google Sheet（<https://docs.google.com/spreadsheets/d/1sSBXW2dAc-4u0j21Q72MzNEBIhDccShhr1iJcAdG0UE/edit>）。本工具沒有序號登入機制，頁面載入時直接 POST 空序號給該網址（`doPost` 不論序號有效與否都會附上 `marquee` 陣列），`localStorage` key `crispeMarquee`，每 20 分鐘背景重抓一次；獨立 `<script>`，跟下方主程式邏輯無關。**`.topbar` 是 `position:sticky;top:0`**，跑馬燈顯示時用 `body.has-marquee .topbar{top:30px}` 把 sticky 的偏移量一起往下推，否則捲動時 topbar 會被固定的跑馬燈蓋住。改跑馬燈內容直接編輯共用 Sheet 即可，不需要重新部署 Apps Script。**`Prompt_Eng/PromptConsole.exe` 已為此重建**（改 `index.html` 後需重新執行 build.ps1／PyInstaller 指令才會反映到 exe 裡，見下方桌面版章節）。
+
 ## 隱私與警語
 
 無伺服器端、無任何資料上傳；所有輸入只存在使用者瀏覽器的 localStorage。首頁與手冊皆明列使用警語：本工具僅產生提示詞架構、不對後續 AI 輸出負責、請勿輸入真實個資或機密資料、僅供教學與個人使用禁止商業化。修改功能時這些警語需一併檢視是否仍準確。
@@ -36,7 +40,7 @@
 `Prompt_Eng/PromptConsole.exe` 是可攜式單檔桌面版（做法比照 `icap-generator/icap/`）：`launcher.py` 把 index/manual 打包進 exe，執行時於 `127.0.0.1:8777` 起本機伺服器並開預設瀏覽器（**固定 8777 埠**——工作區埠號分配：8765 ai-course-hub、8766 video-editor、8767 fruit-ninja-cam、8770 phoenix-loan exe、8771 icap exe、8772 sbir exe、8773 ai-video-studio、8774 ai-video-studio 桌面版 exe、8775 IPA_Kano dashboard exe、8776 Dashboard 通用儀表板工具、**8777 本專案 exe**）。**修改 index.html／manual.html 後 exe 不會自動更新，需重建**（PowerShell、絕對路徑，`--add-data` 的相對路徑會以 specpath 為準而踩雷）：
 
 ```powershell
-$proj = "C:\Users\mark_\AI Test\Prompt"
+$proj = "C:\Users\mark_\AI Test\行銷內容工具\Prompt"
 cd $proj
 python -m PyInstaller --onefile --console --name PromptConsole `
   --distpath "$proj\Prompt_Eng" --workpath "$env:TEMP\pyi-build-prompt" --specpath "$env:TEMP" `
