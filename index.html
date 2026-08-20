@@ -4,6 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>提示詞控制台 · CRISPE 提示詞產生器</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#161310">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="提示詞控制台">
 <style>
   :root{
     --bg:#161310;
@@ -54,11 +61,13 @@
   .brand{display:flex;align-items:center;gap:10px;font-family:var(--font-mono);letter-spacing:0.04em;}
   .brand .dot{width:9px;height:9px;border-radius:50%;background:var(--amber);box-shadow:0 0 8px var(--amber-glow);}
   .brand strong{font-size:15px;font-weight:700;}
-  .topbar nav a{
+  .topbar nav{display:flex;gap:8px;flex-wrap:wrap;}
+  .topbar nav a, .topbar nav button{
     font-family:var(--font-mono);font-size:13px;color:var(--text-dim);text-decoration:none;
     border:1px solid var(--line);padding:7px 14px;border-radius:6px;transition:.15s;
+    background:transparent;cursor:pointer;white-space:nowrap;
   }
-  .topbar nav a:hover{color:var(--amber);border-color:var(--amber);}
+  .topbar nav a:hover, .topbar nav button:hover{color:var(--amber);border-color:var(--amber);}
 
   /* ---------- hero ---------- */
   .hero{
@@ -347,7 +356,10 @@
 
 <div class="topbar">
   <div class="brand"><span class="dot"></span><strong>提示詞控制台</strong></div>
-  <nav><a href="manual.html">操作手冊</a></nav>
+  <nav>
+    <button type="button" id="installBtn">📲 加入主畫面</button>
+    <a href="manual.html">操作手冊</a>
+  </nav>
 </div>
 
 <div class="hero">
@@ -1155,5 +1167,58 @@
 })();
 </script>
 
+<script>
+/* PWA 加入主畫面 — 獨立運作，跟上面主程式邏輯無關 */
+(function () {
+  'use strict';
+  var deferredPrompt = null;
+  var btn = document.getElementById('installBtn');
+
+  var ua = navigator.userAgent || '';
+  var isIOSDevice = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  var isMacDesktop = /Macintosh/.test(ua) && !isIOSDevice;
+  var isSafariEngine = /^((?!chrome|crios|fxios|edgios|android).)*safari/i.test(ua);
+  var isStandalone = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true;
+
+  function fallbackMessage() {
+    if (isIOSDevice) return '請點畫面上的「分享」圖示，選「加入主畫面」';
+    if (isMacDesktop && isSafariEngine) return '請用選單列「檔案」→「加入 Dock」（Safari 17 以上）';
+    return '瀏覽器不支援，或已安裝過';
+  }
+
+  window.addEventListener('beforeinstallprompt', function (e) {
+    e.preventDefault();
+    deferredPrompt = e;
+  });
+  window.addEventListener('appinstalled', function () {
+    deferredPrompt = null;
+  });
+
+  if (btn) {
+    if (isStandalone) {
+      btn.style.display = 'none';
+    } else {
+      btn.addEventListener('click', function () {
+        if (!deferredPrompt) {
+          window.alert(fallbackMessage());
+          return;
+        }
+        try {
+          deferredPrompt.prompt();
+          deferredPrompt.userChoice.then(function () { deferredPrompt = null; });
+        } catch (err) {
+          window.alert(fallbackMessage());
+        }
+      });
+    }
+  }
+
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function () {
+      navigator.serviceWorker.register('service-worker.js').catch(function () {});
+    });
+  }
+})();
+</script>
 </body>
 </html>

@@ -6,6 +6,8 @@
 
 **RWD 已實測驗證（2026-08-20）**：單欄卡片式版面（`.rack` 內每個 `.module` 各自全寬）本身天生對窄螢幕友善，且既有 CSS 已在幾乎每個橫向排列的區塊（`.preset-row`／`.chip-row`／`.output-actions`／`.save-row`／`.saved-item`／`.footer-meta`）都設了 `flex-wrap:wrap`，Playwright 實測 320px／375px／768px 寬度皆**無水平溢出、無版面破圖**，`.api-grid` 也已有 `@media(max-width:600px)` 收成單欄。這次只對 `.topbar`（品牌字樣＋操作手冊連結）額外補上 `flex-wrap:wrap` 做防禦性加固，避免文字未來變長時在極窄螢幕溢出——實際測試沒發現真正的破版，屬預防性補強而非修 bug。**跑馬燈與 sticky topbar 的偏移量整合（`body.has-marquee .topbar{top:30px}`）已在 320px 下確認無疊圖。**
 
+**加入主畫面（PWA，2026-08-20 新增）**：`manifest.json`＋`service-worker.js`（network-first + 同源快取備援，逐字比照 `fruit-ninja-cam`／`crispe-game` 已驗證版本，`CACHE_NAME` 為 `prompt-console-shell-v1`）＋`icons/`（用 PIL 手繪產生，非外部素材：暖色深色機殼底＋琥珀色「旋鈕」造型——外圈深色 bezel＋內圈琥珀色圓＋象牙白刻度線，呼應本工具「類比合成器控制台」視覺主題；`icon-192`／`icon-512`／`icon-maskable-512`／`apple-touch-icon`）。安裝按鈕 `#installBtn` 放在 `.topbar nav` 內、緊鄰「操作手冊」連結（原本 `.topbar nav a` 的樣式擴充成 `.topbar nav a, .topbar nav button` 共用，`nav` 補上 `display:flex;flex-wrap:wrap`）——這個工具沒有獨立的「設定頁」或「開始畫面」，topbar 是唯一常駐可見的區塊，比照其他專案「放在常駐、不用進入功能就看得到的地方」的判斷邏輯。安裝腳本（iOS/Mac Safari 判斷、`beforeinstallprompt`、`isStandalone` 隱藏按鈕）逐字複製九專案共用的已驗證版本，未自行改寫判斷邏輯。`manual.html` 同步新增「加入主畫面」說明卡片。已用 Playwright 實測 320px 下按鈕與操作手冊連結正常換行、manifest／apple-touch-icon 連結存在、service worker 成功註冊為 active。
+
 ## 設計概念
 
 視覺以「類比合成器控制台（modular synth patch bay）」為主題：CRISPE 的六個維度是六個可填寫的「模組」，垂直排列如機架（rack），左側一條「訊號線」貫穿所有模組，模組有內容時左側 LED 指示燈會亮起（`.module.filled .led-node`），象徵訊號已接上；最下方「輸出訊號」模組即時把六個模組的內容組成完整提示詞。配色為暖色調深色機殼（`--bg #161310`）＋琥珀色 LED 強調色（`--amber #e8a33d`），非典型 AI 產品的冷色霓虹風格。
