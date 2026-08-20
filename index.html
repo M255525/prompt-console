@@ -228,6 +228,11 @@
   /* ---------- output module ---------- */
   .module.output{border-color:var(--amber);box-shadow:inset 0 1px 0 rgba(255,255,255,0.04), 0 0 0 1px color-mix(in srgb, var(--amber) 15%, transparent), 0 10px 26px rgba(0,0,0,0.35);}
   .output-meta{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px;}
+  .template-hint{font-size:12px;color:var(--text-faint);margin:-4px 0 10px;line-height:1.6;display:none;}
+  .template-hint.show{display:block;}
+  .template-hint.warn{color:var(--amber);}
+  #regenTemplateBtn{display:none;}
+  #regenTemplateBtn.show{display:inline-block;}
   .meter{font-family:var(--font-mono);font-size:12px;color:var(--text-dim);letter-spacing:.05em;}
   .meter b{color:var(--amber);}
   .format-toggle{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden;}
@@ -573,11 +578,14 @@
         <div class="format-toggle" role="group" aria-label="輸出格式">
           <button type="button" id="fmtLabeled" class="active">標籤版</button>
           <button type="button" id="fmtMerged">精簡版</button>
+          <button type="button" id="fmtTemplate">範本版</button>
         </div>
       </div>
+      <div id="templateHint" class="template-hint"></div>
       <div id="outputBox" aria-live="polite"></div>
       <div class="output-actions">
         <button class="btn primary" id="copyBtn" type="button">複製提示詞</button>
+        <button class="btn" id="regenTemplateBtn" type="button">🔄 重新產生範本版</button>
       </div>
     </div>
 
@@ -631,6 +639,11 @@
   };
   var STORAGE_KEY = 'crispePromptState';
   var format = 'labeled';
+  var templateText = '';
+  var templateSourceText = '';
+  var templateError = '';
+  var templateGenerating = false;
+  var TEMPLATE_MAX_VARS = 10;
 
   var PRESETS = {
     marketing:{
@@ -699,7 +712,17 @@
     return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   }
 
+  function buildMergedSourceText(){
+    var parts = [];
+    FIELDS.forEach(function(k){
+      var v = $(k).value.trim();
+      if(v) parts.push(v);
+    });
+    return parts.join('\n\n');
+  }
+
   function buildOutputText(){
+    if(format === 'template') return templateText;
     var parts = [];
     FIELDS.forEach(function(k){
       var v = $(k).value.trim();
@@ -713,8 +736,60 @@
     return parts.join('\n\n');
   }
 
+  function setTemplateHint(msg, warn){
+    var hint = $('templateHint');
+    if(!msg){ hint.classList.remove('show','warn'); hint.textContent = ''; return; }
+    hint.textContent = msg;
+    hint.classList.add('show');
+    hint.classList.toggle('warn', !!warn);
+  }
+
   function renderOutput(){
     var box = $('outputBox');
+    $('regenTemplateBtn').classList.toggle('show', format === 'template');
+
+    if(format === 'template'){
+      var source = buildMergedSourceText();
+      if(!source){
+        setTemplateHint('');
+        box.innerHTML = '<span class="placeholder">尚未連接任何模組——請至少填寫一項左側欄位，訊號就會出現在這裡。</span>';
+        $('charCount').textContent = 0;
+        return;
+      }
+      if(templateGenerating){
+        setTemplateHint('');
+        box.innerHTML = '<span class="placeholder">🔄 AI 正在判斷重要變數並轉換成範本版，請稍候…</span>';
+        $('charCount').textContent = 0;
+        return;
+      }
+      if(templateError){
+        setTemplateHint('');
+        box.innerHTML = '<span class="placeholder" style="color:var(--red)">轉換失敗：' + escapeHtml(templateError) + '</span>';
+        $('charCount').textContent = 0;
+        return;
+      }
+      if(!templateText){
+        var apiKey = $('aiKey').value.trim();
+        setTemplateHint('');
+        if(!apiKey){
+          box.innerHTML = '<span class="placeholder">範本版需要呼叫 AI 判斷哪些內容該變成變數——請先展開上方「一句話生成六模組」模組裡的「API 連線設定」，填入你的 API 金鑰，再按「🔄 重新產生範本版」。</span>';
+        } else {
+          box.innerHTML = '<span class="placeholder">按下方「🔄 重新產生範本版」開始轉換。</span>';
+        }
+        $('charCount').textContent = 0;
+        return;
+      }
+      if(source !== templateSourceText){
+        setTemplateHint('⚠ 左側模組內容已變更，這是舊版範本——按「🔄 重新產生範本版」更新。', true);
+      } else {
+        setTemplateHint('');
+      }
+      $('charCount').textContent = templateText.length;
+      box.textContent = templateText;
+      return;
+    }
+
+    setTemplateHint('');
     var text = buildOutputText();
     $('charCount').textContent = text.length;
     if(!text){
@@ -729,6 +804,51 @@
       box.innerHTML = html;
     } else {
       box.textContent = text;
+    }
+  }
+
+  function buildTemplatePrompt(sourceText){
+    return '你是提示詞工程專家。以下是一段已經寫好、包含具體情境細節的提示詞：\n\n「' + sourceText + '」\n\n'
+      + '請把它轉換成可重複使用的「範本提示詞」：找出其中屬於「這次情境特定」而非「通用結構」的內容（例如平台名稱、產業別／品類、目標客群描述、具體數字、地點、人名等），把這些內容改寫成 {{變數標籤||原始內容}} 的格式；變數標籤請用 2-4 個字的繁體中文簡短描述這個變數的類別（例如「社群平台」「產業別」「目標客群」「字數上限」）；原始內容若有多個並列選項，用「, 」（半形逗號加一個空格）分隔。\n\n'
+      + '規則：\n'
+      + '1. 除了被標記為變數的部分，其餘文字必須完全保留原文，不能改寫語句、不能增刪內容、不能調整語序或標點。\n'
+      + '2. 只標記真正值得替換、會決定這份提示詞能不能套用到不同情境的內容；語氣詞、連接詞、通用敘述不要標記。\n'
+      + '3. 變數數量最多 ' + TEMPLATE_MAX_VARS + ' 個，請只挑最重要的部分；如果特定細節超過這個數量，只保留最關鍵的 ' + TEMPLATE_MAX_VARS + ' 個，其餘維持原文不標記。\n'
+      + '4. 直接輸出轉換後的完整提示詞純文字，不要加任何說明、不要標題、不要 markdown 圍欄、不要在前後加引號。';
+  }
+
+  function cleanTemplateOutput(text){
+    var t = text.trim();
+    t = t.replace(/^```[a-zA-Z]*\n?/, '').replace(/```\s*$/, '');
+    t = t.replace(/^[「"']([\s\S]*)[」"']$/, '$1');
+    return t.trim();
+  }
+
+  async function generateTemplate(force){
+    var source = buildMergedSourceText();
+    if(!source) return;
+    if(!force && templateText && templateSourceText === source) return;
+
+    var provider = $('aiProvider').value;
+    var model = $('aiModel').value.trim();
+    var apiKey = $('aiKey').value.trim();
+    if(!apiKey || !model){ renderOutput(); return; }
+
+    templateGenerating = true;
+    templateError = '';
+    renderOutput();
+    try{
+      var text = await callLLM(provider, model, apiKey, buildTemplatePrompt(source), function(attempt, status, waitSec){
+        $('outputBox').innerHTML = '<span class="placeholder">API 回應 ' + status + '（服務商暫時過載／限流），' + waitSec + ' 秒後自動重試（第 ' + attempt + '／2 次）…</span>';
+      });
+      templateText = cleanTemplateOutput(text);
+      templateSourceText = source;
+    }catch(err){
+      templateText = '';
+      templateError = err.name === 'TimeoutError' ? '請求逾時（180秒），請重試或換模型' : err.message;
+    }finally{
+      templateGenerating = false;
+      renderOutput();
     }
   }
 
@@ -841,13 +961,26 @@
     format = 'labeled';
     $('fmtLabeled').classList.add('active');
     $('fmtMerged').classList.remove('active');
+    $('fmtTemplate').classList.remove('active');
     renderOutput();
   });
   $('fmtMerged').addEventListener('click', function(){
     format = 'merged';
     $('fmtMerged').classList.add('active');
     $('fmtLabeled').classList.remove('active');
+    $('fmtTemplate').classList.remove('active');
     renderOutput();
+  });
+  $('fmtTemplate').addEventListener('click', function(){
+    format = 'template';
+    $('fmtTemplate').classList.add('active');
+    $('fmtLabeled').classList.remove('active');
+    $('fmtMerged').classList.remove('active');
+    renderOutput();
+    generateTemplate(false);
+  });
+  $('regenTemplateBtn').addEventListener('click', function(){
+    generateTemplate(true);
   });
 
   $('copyBtn').addEventListener('click', function(){
@@ -937,12 +1070,13 @@
     if(existing && !confirm('已經有一筆叫做「' + name + '」的紀錄，要覆蓋它嗎？')) return;
     var fields = {};
     FIELDS.forEach(function(k){ fields[k] = $(k).value; });
+    var saveFormat = format === 'template' ? 'merged' : format;
     if(existing){
       existing.fields = fields;
-      existing.format = format;
+      existing.format = saveFormat;
       existing.savedAt = Date.now();
     } else {
-      list.push({id: 'p' + Date.now() + Math.random().toString(36).slice(2, 7), name: name, savedAt: Date.now(), fields: fields, format: format});
+      list.push({id: 'p' + Date.now() + Math.random().toString(36).slice(2, 7), name: name, savedAt: Date.now(), fields: fields, format: saveFormat});
     }
     persistSaved(list);
     renderSavedList();
@@ -969,6 +1103,8 @@
       format = item.format || 'labeled';
       $('fmtLabeled').classList.toggle('active', format === 'labeled');
       $('fmtMerged').classList.toggle('active', format === 'merged');
+      $('fmtTemplate').classList.remove('active');
+      templateText = ''; templateSourceText = ''; templateError = '';
       filenameTouched = true;
       $('filenameInput').value = item.name;
       saveFilename();
