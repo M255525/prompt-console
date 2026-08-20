@@ -2,6 +2,10 @@
 
 依 CRISPE 架構（Capacity／Role／Insight／Statement／Personality／Experiment）設計的互動式提示詞產生器。單檔前端工具，無建置步驟、無框架、無 package.json，直接開啟 `index.html`（`file://`）或以靜態伺服器託管即可。
 
+**已推公開 GitHub repo**：<https://github.com/M255525/prompt-console>（2026-08-20，repo 名用 `prompt-console` 而非資料夾名 `Prompt`，避免與工作區其他同名慣例衝突並符合 kebab-case 命名習慣），並啟用 GitHub Pages（legacy branch-source，`master` 分支根目錄）：<https://m255525.github.io/prompt-console/>。
+
+**RWD 已實測驗證（2026-08-20）**：單欄卡片式版面（`.rack` 內每個 `.module` 各自全寬）本身天生對窄螢幕友善，且既有 CSS 已在幾乎每個橫向排列的區塊（`.preset-row`／`.chip-row`／`.output-actions`／`.save-row`／`.saved-item`／`.footer-meta`）都設了 `flex-wrap:wrap`，Playwright 實測 320px／375px／768px 寬度皆**無水平溢出、無版面破圖**，`.api-grid` 也已有 `@media(max-width:600px)` 收成單欄。這次只對 `.topbar`（品牌字樣＋操作手冊連結）額外補上 `flex-wrap:wrap` 做防禦性加固，避免文字未來變長時在極窄螢幕溢出——實際測試沒發現真正的破版，屬預防性補強而非修 bug。**跑馬燈與 sticky topbar 的偏移量整合（`body.has-marquee .topbar{top:30px}`）已在 320px 下確認無疊圖。**
+
 ## 設計概念
 
 視覺以「類比合成器控制台（modular synth patch bay）」為主題：CRISPE 的六個維度是六個可填寫的「模組」，垂直排列如機架（rack），左側一條「訊號線」貫穿所有模組，模組有內容時左側 LED 指示燈會亮起（`.module.filled .led-node`），象徵訊號已接上；最下方「輸出訊號」模組即時把六個模組的內容組成完整提示詞。配色為暖色調深色機殼（`--bg #161310`）＋琥珀色 LED 強調色（`--amber #e8a33d`），非典型 AI 產品的冷色霓虹風格。
