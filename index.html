@@ -2,6 +2,15 @@
 <html lang="zh-Hant">
 <head>
 <meta charset="UTF-8">
+<script>
+/* 盡早套用主題，避免換頁時先閃一下預設配色再切換 */
+(function(){
+  try{
+    var t = localStorage.getItem('crispeTheme');
+    if(t && t !== 'dark-amber') document.documentElement.setAttribute('data-theme', t);
+  }catch(e){}
+})();
+</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>提示詞控制台 · CRISPE 提示詞產生器</title>
 <link rel="manifest" href="manifest.json">
@@ -31,18 +40,41 @@
     --font-sans:"Microsoft JhengHei","PingFang TC","Noto Sans TC",sans-serif;
     --radius:10px;
   }
+  /* ---------- 配色主題（切換 <html data-theme="..."> 即可整站換色） ---------- */
+  :root[data-theme="dark-teal"]{
+    --bg:#0d1a1a; --bg-alt:#122423; --panel:#17302e; --panel-raised:#1d3b38;
+    --line:#2f5854; --line-soft:#20403c;
+    --text:#e8f5f2; --text-dim:#9fc7c0; --text-faint:#628985;
+    --amber:#38d6bf; --amber-soft:rgba(56,214,191,0.16); --amber-glow:rgba(56,214,191,0.55);
+    --teal:#e8a33d; --red:#e0665a;
+  }
+  :root[data-theme="dark-violet"]{
+    --bg:#160f1e; --bg-alt:#1c1526; --panel:#241a30; --panel-raised:#2d2140;
+    --line:#4a3a63; --line-soft:#332845;
+    --text:#f1ecf9; --text-dim:#b9a8d1; --text-faint:#7e6d95;
+    --amber:#a374e8; --amber-soft:rgba(163,116,232,0.16); --amber-glow:rgba(163,116,232,0.55);
+    --teal:#e87ab0; --red:#e0665a;
+  }
+  :root[data-theme="light"]{
+    --bg:#faf6ee; --bg-alt:#f1e9d8; --panel:#ffffff; --panel-raised:#fff9ee;
+    --line:#ddccac; --line-soft:#ece0c8;
+    --text:#2b2013; --text-dim:#6b5b3f; --text-faint:#96876a;
+    --amber:#c97f1a; --amber-soft:rgba(201,127,26,0.12); --amber-glow:rgba(201,127,26,0.35);
+    --teal:#1f8a76; --red:#c0392b;
+  }
   *{box-sizing:border-box;}
   html{-webkit-text-size-adjust:100%;}
   body{
     margin:0;
     background:var(--bg);
     background-image:
-      radial-gradient(circle at 20% 0%, rgba(232,163,61,0.05), transparent 45%),
-      radial-gradient(circle at 90% 10%, rgba(79,184,166,0.04), transparent 40%);
+      radial-gradient(circle at 20% 0%, color-mix(in srgb, var(--amber) 5%, transparent), transparent 45%),
+      radial-gradient(circle at 90% 10%, color-mix(in srgb, var(--teal) 4%, transparent), transparent 40%);
     color:var(--text);
     font-family:var(--font-sans);
     line-height:1.6;
     min-height:100vh;
+    transition:background-color .2s,color .2s;
   }
   a{color:var(--amber);}
   ::selection{background:var(--amber);color:#171310;}
@@ -61,13 +93,25 @@
   .brand{display:flex;align-items:center;gap:10px;font-family:var(--font-mono);letter-spacing:0.04em;}
   .brand .dot{width:9px;height:9px;border-radius:50%;background:var(--amber);box-shadow:0 0 8px var(--amber-glow);}
   .brand strong{font-size:15px;font-weight:700;}
-  .topbar nav{display:flex;gap:8px;flex-wrap:wrap;}
-  .topbar nav a, .topbar nav button{
+  .topbar nav{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+  .topbar nav a, .topbar nav > button{
     font-family:var(--font-mono);font-size:13px;color:var(--text-dim);text-decoration:none;
     border:1px solid var(--line);padding:7px 14px;border-radius:6px;transition:.15s;
     background:transparent;cursor:pointer;white-space:nowrap;
   }
-  .topbar nav a:hover, .topbar nav button:hover{color:var(--amber);border-color:var(--amber);}
+  .topbar nav a:hover, .topbar nav > button:hover{color:var(--amber);border-color:var(--amber);}
+
+  .theme-picker{
+    display:flex;align-items:center;gap:6px;padding:5px 8px;
+    border:1px solid var(--line);border-radius:20px;background:var(--bg-alt);
+  }
+  .theme-swatch{
+    width:17px;height:17px;border-radius:50%;padding:0;cursor:pointer;
+    border:2px solid transparent;box-shadow:inset 0 0 0 1px rgba(0,0,0,.3);
+    transition:transform .15s,border-color .15s;
+  }
+  .theme-swatch:hover{transform:scale(1.18);}
+  .theme-swatch.active{border-color:var(--text);}
 
   /* ---------- hero ---------- */
   .hero{
@@ -124,7 +168,7 @@
   }
   .btn:hover{border-color:var(--amber);color:var(--amber);}
   .btn.primary{background:var(--amber);color:#1a1409;border-color:var(--amber);font-weight:700;}
-  .btn.primary:hover{background:#f2b458;color:#1a1409;box-shadow:0 0 16px var(--amber-glow);}
+  .btn.primary:hover{background:color-mix(in srgb, var(--amber) 80%, white);color:#1a1409;box-shadow:0 0 16px var(--amber-glow);}
   .btn.ghost{background:transparent;}
   .btn.danger:hover{border-color:var(--red);color:var(--red);}
 
@@ -182,7 +226,7 @@
   .chip:hover{border-color:var(--teal);color:var(--teal);}
 
   /* ---------- output module ---------- */
-  .module.output{border-color:var(--amber);box-shadow:inset 0 1px 0 rgba(255,255,255,0.04), 0 0 0 1px rgba(232,163,61,0.15), 0 10px 26px rgba(0,0,0,0.35);}
+  .module.output{border-color:var(--amber);box-shadow:inset 0 1px 0 rgba(255,255,255,0.04), 0 0 0 1px color-mix(in srgb, var(--amber) 15%, transparent), 0 10px 26px rgba(0,0,0,0.35);}
   .output-meta{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px;}
   .meter{font-family:var(--font-mono);font-size:12px;color:var(--text-dim);letter-spacing:.05em;}
   .meter b{color:var(--amber);}
@@ -244,10 +288,10 @@
   .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 
   /* ---------- AI generate module ---------- */
-  .module.ai-module{border-color:var(--teal);box-shadow:inset 0 1px 0 rgba(255,255,255,0.04), 0 0 0 1px rgba(79,184,166,0.15), 0 10px 26px rgba(0,0,0,0.3);}
+  .module.ai-module{border-color:var(--teal);box-shadow:inset 0 1px 0 rgba(255,255,255,0.04), 0 0 0 1px color-mix(in srgb, var(--teal) 15%, transparent), 0 10px 26px rgba(0,0,0,0.3);}
   .letter-badge.ai-badge{color:var(--teal);font-size:14px;letter-spacing:.02em;}
   .led-node.ai-led{background:var(--bg);border-color:var(--line);}
-  .led-node.ai-led.ready{background:var(--teal);border-color:var(--teal);box-shadow:0 0 10px rgba(79,184,166,0.55);}
+  .led-node.ai-led.ready{background:var(--teal);border-color:var(--teal);box-shadow:0 0 10px color-mix(in srgb, var(--teal) 55%, transparent);}
   .chip.ai-example:hover{border-color:var(--amber);color:var(--amber);}
 
   details.api-settings{
@@ -281,7 +325,7 @@
   }
   .warn-box{
     max-width:760px;margin:0 auto 22px;
-    background:rgba(209,84,63,0.08);border:1px solid rgba(209,84,63,0.35);
+    background:color-mix(in srgb, var(--red) 8%, transparent);border:1px solid color-mix(in srgb, var(--red) 35%, transparent);
     border-radius:8px;padding:16px 18px;font-size:13px;color:var(--text-dim);
   }
   .warn-box strong{color:var(--red);}
@@ -357,6 +401,12 @@
 <div class="topbar">
   <div class="brand"><span class="dot"></span><strong>提示詞控制台</strong></div>
   <nav>
+    <div class="theme-picker" role="group" aria-label="配色主題">
+      <button type="button" class="theme-swatch" data-theme="dark-amber" aria-label="琥珀暗色" title="琥珀暗色" style="background:linear-gradient(135deg,#161310 50%,#e8a33d 50%)"></button>
+      <button type="button" class="theme-swatch" data-theme="dark-teal" aria-label="青綠暗色" title="青綠暗色" style="background:linear-gradient(135deg,#0d1a1a 50%,#38d6bf 50%)"></button>
+      <button type="button" class="theme-swatch" data-theme="dark-violet" aria-label="紫夜暗色" title="紫夜暗色" style="background:linear-gradient(135deg,#160f1e 50%,#a374e8 50%)"></button>
+      <button type="button" class="theme-swatch" data-theme="light" aria-label="淺色" title="淺色" style="background:linear-gradient(135deg,#faf6ee 50%,#c97f1a 50%)"></button>
+    </div>
     <button type="button" id="installBtn">📲 加入主畫面</button>
     <a href="manual.html">操作手冊</a>
   </nav>
@@ -755,6 +805,37 @@
       $('aiIdea').focus();
     });
   });
+
+  /* ---------- 配色主題切換 ---------- */
+  var THEME_STORAGE_KEY = 'crispeTheme';
+  var THEME_COLOR_META = { 'dark-amber':'#161310', 'dark-teal':'#0d1a1a', 'dark-violet':'#160f1e', 'light':'#faf6ee' };
+  var swatches = document.querySelectorAll('.theme-swatch');
+
+  function applyTheme(theme, persist){
+    if(theme === 'dark-amber'){
+      document.documentElement.removeAttribute('data-theme');
+    }else{
+      document.documentElement.setAttribute('data-theme', theme);
+    }
+    swatches.forEach(function(sw){
+      sw.classList.toggle('active', sw.getAttribute('data-theme') === theme);
+    });
+    var metaTheme = document.querySelector('meta[name="theme-color"]');
+    if(metaTheme) metaTheme.setAttribute('content', THEME_COLOR_META[theme] || THEME_COLOR_META['dark-amber']);
+    if(persist){
+      try{ localStorage.setItem(THEME_STORAGE_KEY, theme); }catch(e){}
+    }
+  }
+  swatches.forEach(function(sw){
+    sw.addEventListener('click', function(){
+      applyTheme(sw.getAttribute('data-theme'), true);
+    });
+  });
+  (function initTheme(){
+    var saved = 'dark-amber';
+    try{ saved = localStorage.getItem(THEME_STORAGE_KEY) || 'dark-amber'; }catch(e){}
+    applyTheme(saved, false);
+  })();
 
   $('fmtLabeled').addEventListener('click', function(){
     format = 'labeled';
