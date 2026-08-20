@@ -233,6 +233,14 @@
   .template-hint.warn{color:var(--amber);}
   #regenTemplateBtn{display:none;}
   #regenTemplateBtn.show{display:inline-block;}
+  .template-vars-field{display:none;align-items:center;gap:8px;}
+  .template-vars-field.show{display:inline-flex;}
+  .template-vars-field label{font-family:var(--font-mono);font-size:12px;color:var(--text-faint);white-space:nowrap;}
+  .template-vars-field input{
+    width:56px;background:var(--bg-alt);color:var(--text);border:1px solid var(--line);
+    border-radius:6px;padding:8px 8px;font-family:var(--font-mono);font-size:13px;text-align:center;
+  }
+  .template-vars-field input:focus{border-color:var(--amber);}
   .meter{font-family:var(--font-mono);font-size:12px;color:var(--text-dim);letter-spacing:.05em;}
   .meter b{color:var(--amber);}
   .format-toggle{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden;}
@@ -585,6 +593,10 @@
       <div id="outputBox" aria-live="polite"></div>
       <div class="output-actions">
         <button class="btn primary" id="copyBtn" type="button">複製提示詞</button>
+        <div class="template-vars-field" id="templateVarsField">
+          <label for="templateMaxVars">變數上限</label>
+          <input type="number" id="templateMaxVars" min="1" max="10" value="10" inputmode="numeric">
+        </div>
         <button class="btn" id="regenTemplateBtn" type="button">🔄 重新產生範本版</button>
       </div>
     </div>
@@ -641,9 +653,11 @@
   var format = 'labeled';
   var templateText = '';
   var templateSourceText = '';
+  var templateSourceMaxVars = 0;
   var templateError = '';
   var templateGenerating = false;
-  var TEMPLATE_MAX_VARS = 10;
+  var TEMPLATE_MAX_VARS_CAP = 10;
+  var TEMPLATE_MAX_VARS_KEY = 'crispeTemplateMaxVars';
 
   var PRESETS = {
     marketing:{
@@ -744,9 +758,38 @@
     hint.classList.toggle('warn', !!warn);
   }
 
+  function getTemplateMaxVars(){
+    var v = parseInt($('templateMaxVars').value, 10);
+    if(isNaN(v)) v = TEMPLATE_MAX_VARS_CAP;
+    if(v < 1) v = 1;
+    if(v > TEMPLATE_MAX_VARS_CAP) v = TEMPLATE_MAX_VARS_CAP;
+    return v;
+  }
+  function syncTemplateMaxVarsInput(){
+    var clamped = getTemplateMaxVars();
+    if($('templateMaxVars').value !== String(clamped)) $('templateMaxVars').value = clamped;
+    try{ localStorage.setItem(TEMPLATE_MAX_VARS_KEY, String(clamped)); }catch(e){}
+  }
+  (function initTemplateMaxVars(){
+    var saved = 10;
+    try{
+      var raw = parseInt(localStorage.getItem(TEMPLATE_MAX_VARS_KEY), 10);
+      if(!isNaN(raw)) saved = raw;
+    }catch(e){}
+    if(saved < 1) saved = 1;
+    if(saved > TEMPLATE_MAX_VARS_CAP) saved = TEMPLATE_MAX_VARS_CAP;
+    $('templateMaxVars').value = saved;
+  })();
+  $('templateMaxVars').addEventListener('change', syncTemplateMaxVarsInput);
+  $('templateMaxVars').addEventListener('blur', syncTemplateMaxVarsInput);
+  $('templateMaxVars').addEventListener('input', function(){
+    if(format === 'template') renderOutput();
+  });
+
   function renderOutput(){
     var box = $('outputBox');
     $('regenTemplateBtn').classList.toggle('show', format === 'template');
+    $('templateVarsField').classList.toggle('show', format === 'template');
 
     if(format === 'template'){
       var source = buildMergedSourceText();
@@ -781,6 +824,8 @@
       }
       if(source !== templateSourceText){
         setTemplateHint('⚠ 左側模組內容已變更，這是舊版範本——按「🔄 重新產生範本版」更新。', true);
+      } else if(getTemplateMaxVars() !== templateSourceMaxVars){
+        setTemplateHint('⚠ 變數上限已變更為 ' + getTemplateMaxVars() + ' 個，這是舊設定產生的範本——按「🔄 重新產生範本版」更新。', true);
       } else {
         setTemplateHint('');
       }
@@ -807,13 +852,13 @@
     }
   }
 
-  function buildTemplatePrompt(sourceText){
+  function buildTemplatePrompt(sourceText, maxVars){
     return '你是提示詞工程專家。以下是一段已經寫好、包含具體情境細節的提示詞：\n\n「' + sourceText + '」\n\n'
       + '請把它轉換成可重複使用的「範本提示詞」：找出其中屬於「這次情境特定」而非「通用結構」的內容（例如平台名稱、產業別／品類、目標客群描述、具體數字、地點、人名等），把這些內容改寫成 {{變數標籤||原始內容}} 的格式；變數標籤請用 2-4 個字的繁體中文簡短描述這個變數的類別（例如「社群平台」「產業別」「目標客群」「字數上限」）；原始內容若有多個並列選項，用「, 」（半形逗號加一個空格）分隔。\n\n'
       + '規則：\n'
       + '1. 除了被標記為變數的部分，其餘文字必須完全保留原文，不能改寫語句、不能增刪內容、不能調整語序或標點。\n'
       + '2. 只標記真正值得替換、會決定這份提示詞能不能套用到不同情境的內容；語氣詞、連接詞、通用敘述不要標記。\n'
-      + '3. 變數數量最多 ' + TEMPLATE_MAX_VARS + ' 個，請只挑最重要的部分；如果特定細節超過這個數量，只保留最關鍵的 ' + TEMPLATE_MAX_VARS + ' 個，其餘維持原文不標記。\n'
+      + '3. 變數數量最多 ' + maxVars + ' 個，請只挑最重要的部分；如果特定細節超過這個數量，只保留最關鍵的 ' + maxVars + ' 個，其餘維持原文不標記。\n'
       + '4. 直接輸出轉換後的完整提示詞純文字，不要加任何說明、不要標題、不要 markdown 圍欄、不要在前後加引號。';
   }
 
@@ -827,7 +872,9 @@
   async function generateTemplate(force){
     var source = buildMergedSourceText();
     if(!source) return;
-    if(!force && templateText && templateSourceText === source) return;
+    syncTemplateMaxVarsInput();
+    var maxVars = getTemplateMaxVars();
+    if(!force && templateText && templateSourceText === source && templateSourceMaxVars === maxVars) return;
 
     var provider = $('aiProvider').value;
     var model = $('aiModel').value.trim();
@@ -838,11 +885,12 @@
     templateError = '';
     renderOutput();
     try{
-      var text = await callLLM(provider, model, apiKey, buildTemplatePrompt(source), function(attempt, status, waitSec){
+      var text = await callLLM(provider, model, apiKey, buildTemplatePrompt(source, maxVars), function(attempt, status, waitSec){
         $('outputBox').innerHTML = '<span class="placeholder">API 回應 ' + status + '（服務商暫時過載／限流），' + waitSec + ' 秒後自動重試（第 ' + attempt + '／2 次）…</span>';
       });
       templateText = cleanTemplateOutput(text);
       templateSourceText = source;
+      templateSourceMaxVars = maxVars;
     }catch(err){
       templateText = '';
       templateError = err.name === 'TimeoutError' ? '請求逾時（180秒），請重試或換模型' : err.message;
