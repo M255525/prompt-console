@@ -43,6 +43,8 @@
 
 `#marqueeBar` 固定在頁面最上方（`position:fixed`，z-index 高於 `.topbar` 的 sticky），內容跟 ai-video-studio 系列（主版／`AIvideo_studio` 教學版／`ppt-course-video`／`video-editor`）**共用同一個授權伺服器**（`https://script.google.com/macros/s/AKfycbwKX0.../exec`）與同一份跑馬燈 Google Sheet（<https://docs.google.com/spreadsheets/d/1sSBXW2dAc-4u0j21Q72MzNEBIhDccShhr1iJcAdG0UE/edit>）。本工具沒有序號登入機制，頁面載入時直接 POST 空序號給該網址（`doPost` 不論序號有效與否都會附上 `marquee` 陣列），`localStorage` key `crispeMarquee`，每 20 分鐘背景重抓一次；獨立 `<script>`，跟下方主程式邏輯無關。**`.topbar` 是 `position:sticky;top:0`**，跑馬燈顯示時用 `body.has-marquee .topbar{top:30px}` 把 sticky 的偏移量一起往下推，否則捲動時 topbar 會被固定的跑馬燈蓋住。改跑馬燈內容直接編輯共用 Sheet 即可，不需要重新部署 Apps Script。**`Prompt_Eng/PromptConsole.exe` 已為此重建**（改 `index.html` 後需重新執行 build.ps1／PyInstaller 指令才會反映到 exe 裡，見下方桌面版章節）。
 
+**2026-08-20 更新（`Code.gs` 未改動、不需重新部署）**：`render()` 新增 `lastKey`（`JSON.stringify(items)`）比對，內容沒變就不重繪，CSS animation 不再被重置歸零重跑；新增 `appendParsedText()`／`buildTrackContent()` 支援 `[文字](https://...)` 連結語法（`createTextNode` 組 DOM，避免 XSS），資料格式仍是純字串陣列，向下相容。此次只 commit＋push 了 `index.html`（GitHub Pages 自動重新部署），**`Prompt_Eng/PromptConsole.exe` 尚未為此重建**。
+
 ## 隱私與警語
 
 無伺服器端、無任何資料上傳；所有輸入只存在使用者瀏覽器的 localStorage。首頁與手冊皆明列使用警語：本工具僅產生提示詞架構、不對後續 AI 輸出負責、請勿輸入真實個資或機密資料、僅供教學與個人使用禁止商業化。修改功能時這些警語需一併檢視是否仍準確。
