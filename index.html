@@ -181,30 +181,6 @@
   }
   .chip:hover{border-color:var(--teal);color:var(--teal);}
 
-  /* ---------- 目標客群 ---------- */
-  .audience-block{margin-top:16px;padding-top:14px;border-top:1px dashed var(--line-soft);}
-  .audience-label{font-family:var(--font-mono);font-size:11px;color:var(--text-faint);letter-spacing:.08em;margin-bottom:2px;}
-  .audience-chip.audience-none{border-style:dashed;color:var(--text-faint);}
-  .audience-chip.audience-none:hover{border-color:var(--text-dim);color:var(--text-dim);}
-  .audience-custom{
-    display:inline-flex;align-items:center;gap:6px;padding:5px 6px 5px 12px;
-  }
-  .audience-custom:hover{border-color:var(--teal);}
-  .audience-chip-label{cursor:pointer;}
-  .audience-del{
-    font-family:var(--font-mono);font-size:12px;line-height:1;color:var(--text-faint);
-    background:transparent;border:none;cursor:pointer;padding:2px 4px;border-radius:50%;
-  }
-  .audience-del:hover{color:var(--red);background:rgba(209,84,63,0.12);}
-  .audience-add-row{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;}
-  .audience-add-row input{
-    flex:1;min-width:160px;background:var(--bg-alt);color:var(--text);
-    border:1px solid var(--line);border-radius:6px;padding:8px 12px;
-    font-family:var(--font-sans);font-size:13px;
-  }
-  .audience-add-row input:focus{border-color:var(--amber);}
-  .audience-add-row input::placeholder{color:var(--text-faint);}
-
   /* ---------- output module ---------- */
   .module.output{border-color:var(--amber);box-shadow:inset 0 1px 0 rgba(255,255,255,0.04), 0 0 0 1px rgba(232,163,61,0.15), 0 10px 26px rgba(0,0,0,0.35);}
   .output-meta{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px;}
@@ -484,26 +460,6 @@
       </div>
       <p class="module-hint">AI 需要知道哪些背景資訊、限制條件或目標對象，才能給出貼合實際狀況的答案？</p>
       <textarea id="insight" aria-label="背景洞悉 Insight" placeholder="例：這是一家剛開幕的手沖咖啡店，主打客群是 25-35 歲上班族，目前沒有任何社群帳號。"></textarea>
-      <div class="audience-block">
-        <div class="audience-label">快速加入目標客群</div>
-        <div class="chip-row" id="audienceChips">
-          <button type="button" class="chip audience-chip" data-target="insight" data-value="25-35歲上班族">25-35歲上班族</button>
-          <button type="button" class="chip audience-chip" data-target="insight" data-value="中小企業主／經營者">中小企業主／經營者</button>
-          <button type="button" class="chip audience-chip" data-target="insight" data-value="學生族群">學生族群</button>
-          <button type="button" class="chip audience-chip" data-target="insight" data-value="銀髮族／熟齡客群">銀髮族／熟齡客群</button>
-          <button type="button" class="chip audience-chip" data-target="insight" data-value="新手父母／育兒家庭">新手父母／育兒家庭</button>
-          <button type="button" class="chip audience-chip" data-target="insight" data-value="電商網購消費者">電商網購消費者</button>
-          <button type="button" class="chip audience-chip" data-target="insight" data-value="B2B採購決策者">B2B採購決策者</button>
-          <button type="button" class="chip audience-chip" data-target="insight" data-value="自由工作者／SOHO族">自由工作者／SOHO族</button>
-          <button type="button" class="chip audience-chip" data-target="insight" data-value="企業HR／人資主管">企業HR／人資主管</button>
-          <button type="button" class="chip audience-chip" data-target="insight" data-value="內部團隊／同事">內部團隊／同事</button>
-          <button type="button" class="chip audience-chip audience-none" data-target="insight" data-value="不限定特定客群">沒有特定客群</button>
-        </div>
-        <div class="audience-add-row">
-          <input type="text" id="audienceCustomInput" maxlength="20" spellcheck="false" placeholder="補充自己的目標客群…">
-          <button type="button" class="chip" id="audienceAddBtn">＋ 新增</button>
-        </div>
-      </div>
     </div>
 
     <div class="module" data-key="statement">
@@ -799,91 +755,6 @@
       $('aiIdea').focus();
     });
   });
-
-  /* ---------- 目標客群：補充自訂客群（可新增／刪除，存 localStorage） ---------- */
-  var AUDIENCE_STORAGE_KEY = 'crispeCustomAudiences';
-  var AUDIENCE_BUILTIN = ['25-35歲上班族','中小企業主／經營者','學生族群','銀髮族／熟齡客群','新手父母／育兒家庭','電商網購消費者','B2B採購決策者','自由工作者／SOHO族','企業HR／人資主管','內部團隊／同事','不限定特定客群'];
-
-  function loadCustomAudiences(){
-    try{
-      var raw = JSON.parse(localStorage.getItem(AUDIENCE_STORAGE_KEY) || '[]');
-      return Array.isArray(raw) ? raw : [];
-    }catch(e){ return []; }
-  }
-  function saveCustomAudiences(list){
-    try{ localStorage.setItem(AUDIENCE_STORAGE_KEY, JSON.stringify(list)); }catch(e){}
-  }
-  function insertAudienceValue(val){
-    var target = $('insight');
-    var current = target.value.trim();
-    target.value = current ? current + '、' + val : val;
-    target.dispatchEvent(new Event('input'));
-    target.focus();
-  }
-  function makeCustomAudienceChip(item){
-    var chip = document.createElement('span');
-    chip.className = 'chip audience-chip audience-custom';
-    chip.setAttribute('role','button');
-    chip.setAttribute('tabindex','0');
-
-    var label = document.createElement('span');
-    label.className = 'audience-chip-label';
-    label.textContent = item.name;
-
-    var del = document.createElement('button');
-    del.type = 'button';
-    del.className = 'audience-del';
-    del.setAttribute('aria-label','刪除「' + item.name + '」這個客群');
-    del.textContent = '✕';
-
-    chip.appendChild(label);
-    chip.appendChild(del);
-
-    chip.addEventListener('click', function(e){
-      if (e.target === del) return;
-      insertAudienceValue(item.name);
-    });
-    chip.addEventListener('keydown', function(e){
-      if (e.key === 'Enter' || e.key === ' '){
-        e.preventDefault();
-        insertAudienceValue(item.name);
-      }
-    });
-    del.addEventListener('click', function(e){
-      e.stopPropagation();
-      var list = loadCustomAudiences().filter(function(x){ return x.id !== item.id; });
-      saveCustomAudiences(list);
-      chip.remove();
-    });
-    return chip;
-  }
-  function renderCustomAudiences(){
-    var container = $('audienceChips');
-    container.querySelectorAll('.audience-custom').forEach(function(el){ el.remove(); });
-    loadCustomAudiences().forEach(function(item){
-      container.appendChild(makeCustomAudienceChip(item));
-    });
-  }
-  function addCustomAudience(){
-    var input = $('audienceCustomInput');
-    var name = input.value.trim().slice(0,20);
-    if (!name) return;
-    var list = loadCustomAudiences();
-    if (AUDIENCE_BUILTIN.indexOf(name) !== -1 || list.some(function(x){ return x.name === name; })){
-      showToast('這個客群已經在清單裡了');
-      return;
-    }
-    list.push({ id: 'a' + Date.now().toString(36) + Math.random().toString(36).slice(2,6), name: name });
-    saveCustomAudiences(list);
-    renderCustomAudiences();
-    input.value = '';
-    insertAudienceValue(name);
-  }
-  $('audienceAddBtn').addEventListener('click', addCustomAudience);
-  $('audienceCustomInput').addEventListener('keydown', function(e){
-    if (e.key === 'Enter'){ e.preventDefault(); addCustomAudience(); }
-  });
-  renderCustomAudiences();
 
   $('fmtLabeled').addEventListener('click', function(){
     format = 'labeled';
